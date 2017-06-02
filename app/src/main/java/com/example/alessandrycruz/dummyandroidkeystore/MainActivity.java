@@ -4,37 +4,37 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
-import com.example.alessandrycruz.dummyandroidkeystore.security.utils.Secure_Util;
+import com.example.alessandrycruz.dummyandroidkeystore.security.BaseSecurity_Util;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-
-import javax.crypto.SecretKey;
+import java.security.KeyPair;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
+
+    private BaseSecurity_Util mBaseSecurity_Util;
+    private KeyPair mKeyPair;
+    private String mKeyStoreName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Secure_Util secure_Util = new Secure_Util();
+        mBaseSecurity_Util = new BaseSecurity_Util();
 
-        try {
-            String system = "2";
-            String agencyId = "3996";
-            String userName = "Alex";
-            String userPassword = "test";
-            String password = system + agencyId + userName + userPassword;
-            byte[] salt = secure_Util.getSecretFactorySalt(1000);
-
-            SecretKey secretKey = secure_Util.generateSecretFactoryKey(password, salt);
-            Log.d(TAG, "SecureKey: " + secure_Util.secretKeyFactoryToString(secretKey));
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+        List<String> keyStoreAliases = mBaseSecurity_Util.getKeyStoreAliases();
+        if (keyStoreAliases != null && keyStoreAliases.size() > 0) {
+            // Gets the KeyStore name if already exits
+            mKeyStoreName = keyStoreAliases.get(0);
+        } else {
+            // Create new KeyStore
+            mKeyPair = mBaseSecurity_Util.getKeyStoreKeyPair(this, "KeyName");
         }
+
+        String cipherText = mBaseSecurity_Util.encryptPlainTextWithKeyPair(mKeyStoreName, "PlainText");
+        Log.i(TAG, "Cipher Text: " + cipherText);
+        String plainText = mBaseSecurity_Util.decryptCipherTextWithKeyPair(mKeyStoreName, cipherText);
+        Log.i(TAG, "Plain Text: " + plainText);
     }
 }
