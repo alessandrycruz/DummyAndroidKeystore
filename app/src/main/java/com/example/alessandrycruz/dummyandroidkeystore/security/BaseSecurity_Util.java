@@ -17,6 +17,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -72,7 +73,7 @@ public class BaseSecurity_Util {
         return null;
     }
 
-    public KeyPair getKeyStoreKeyPair(Context context, String keyStoreName) {
+    public KeyPair generateKeyStoreKeyPair(Context context, String keyStoreName) {
         try {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat(KEY_STORE_DATE_FORMAT,
                     Locale.getDefault());
@@ -104,9 +105,7 @@ public class BaseSecurity_Util {
                 keyPairGenerator.initialize(keyPairGeneratorSpec);
             }
 
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
-
-            return keyPair;
+            return keyPairGenerator.generateKeyPair();
         } catch (InvalidAlgorithmParameterException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
@@ -120,13 +119,65 @@ public class BaseSecurity_Util {
         return null;
     }
 
-    public String encryptPlainTextWithKeyPair(String keyName, String plainText) {
+    public String getKeyStorePublicKey(String keyStoreName) {
         try {
             KeyStore keyStore = KeyStore.getInstance(KEYS_TORE_INSTANCE_TYPE);
             keyStore.load(null);
 
             KeyStore.PrivateKeyEntry privateKeyEntry =
-                    (KeyStore.PrivateKeyEntry) keyStore.getEntry(keyName, null);
+                    (KeyStore.PrivateKeyEntry) keyStore.getEntry(keyStoreName, null);
+            PublicKey publicKey = privateKeyEntry.getCertificate().getPublicKey();
+            byte[] publicKeyEncoded = publicKey.getEncoded();
+
+            return Base64.encodeToString(publicKeyEncoded, Base64.DEFAULT);
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (UnrecoverableEntryException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public String getKeyStorePrivateKey(String keyStoreName) {
+        try {
+            KeyStore keyStore = KeyStore.getInstance(KEYS_TORE_INSTANCE_TYPE);
+            keyStore.load(null);
+
+            KeyStore.PrivateKeyEntry privateKeyEntry =
+                    (KeyStore.PrivateKeyEntry) keyStore.getEntry(keyStoreName, null);
+            PrivateKey privateKey = privateKeyEntry.getPrivateKey();
+            byte[] privateKeyEncoded = privateKey.getEncoded();
+
+            return Base64.encodeToString(privateKeyEncoded, Base64.DEFAULT);
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (UnrecoverableEntryException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public String encryptPlainTextWithKeyPair(String keyStoreName, String plainText) {
+        try {
+            KeyStore keyStore = KeyStore.getInstance(KEYS_TORE_INSTANCE_TYPE);
+            keyStore.load(null);
+
+            KeyStore.PrivateKeyEntry privateKeyEntry =
+                    (KeyStore.PrivateKeyEntry) keyStore.getEntry(keyStoreName, null);
             PublicKey publicKey = privateKeyEntry.getCertificate().getPublicKey();
             Cipher cipher;
 
@@ -166,9 +217,9 @@ public class BaseSecurity_Util {
 
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
 
-            byte[] encodedCipherText = cipher.doFinal(cipherText.getBytes());
+            byte[] decodedCipherText = cipher.doFinal(Base64.decode(cipherText, Base64.DEFAULT));
 
-            return Base64.encodeToString(encodedCipherText, Base64.DEFAULT);
+            return new String(decodedCipherText, "UTF-8");
         } catch (Exception e) {
             e.printStackTrace();
         }
